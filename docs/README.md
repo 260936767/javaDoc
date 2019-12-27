@@ -55,11 +55,12 @@ Listening at http://localhost:3000
 
 ### 6.发布到github上 GitHub Pages
 
-git add .
+1. git add .
 
-git commit -m 'msg'
+2. git commit -m 'msg'
 
-git push origin master
+3. git push origin master
+
 
 ```xml
 D:\Documents\javaDoc>git add .
