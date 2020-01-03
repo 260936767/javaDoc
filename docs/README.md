@@ -12,7 +12,7 @@ git clone https://github.com/260936767/javaDoc.git
 
 npm i docsify-cli -g
 
-```xml
+```bash
 D:\Documents\javaDoc>npm i docsify-cli -g
 D:\nodejs\node_global\docsify -> D:\nodejs\node_global\node_modules\docsify-cli\bin\docsify
 
@@ -36,7 +36,7 @@ added 314 packages from 169 contributors in 154.985s
 
 docsify init ./docs
 
-```xml
+```bash
 D:\Documents\javaDoc>docsify init ./docs
 
 Initialization succeeded! Please run docsify serve ./docs
@@ -44,7 +44,7 @@ Initialization succeeded! Please run docsify serve ./docs
 
 ### 5.本地预览
 
-```xml
+```bash
 D:\Documents\javaDoc>docsify serve docs
 
 Serving D:\Documents\javaDoc\docs now.
@@ -62,7 +62,7 @@ Listening at http://localhost:3000
 3. git push origin master
 
 
-```xml
+```bash
 D:\Documents\javaDoc>git add .
 
 D:\Documents\javaDoc>git commit -m  'msg'
