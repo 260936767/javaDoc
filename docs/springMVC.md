@@ -620,6 +620,372 @@ springmvc-servlet.xml 注掉视图解析器的配置 InternalResourceViewResolve
 
    - 包装参数实体
 
+     model
      
+     ```java
+     @Data
+     public class User {
+         private long id;
+         private String userName;
+         private int age;
+     }
+     ```
+     
+     controller
+     
+     ```java
+         @RequestMapping(value = "/h4",method = RequestMethod.GET)
+         public String h4(Model model, User user){
+             model.addAttribute("msg",user);
+             return "hello";
+         }
+     ```
+     
+     http://localhost:8080/hello/h4?id=98&userName=yc&age=18
+     
+     ![image-20200107144341452](.\images\image-20200107144341452.png)
+     
+     前端传入的属性要和实体属性名称一一对应才可以，顺序无关。
+     
+     ![image-20200107144622504](.\images\image-20200107144622504.png)
 
 2. 数据回显
+
+   - Model
+
+      大部分使用，精简
+
+   - ModelAndView
+
+      可以在存储数据的同时设置返回的逻辑视图，进行跳转。
+
+   - ModelMap
+
+      继承 LinkedHashMap，有LinkedHashMap的特性。
+
+3. 乱码问题
+
+   - web
+
+     注意目录层级
+
+     ![image-20200107150536612](.\images\image-20200107150536612.png)
+
+     form.jsp
+
+     ```jsp
+     <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+     <html>
+     <head>
+         <title>Title</title>
+     </head>
+     <body>
+     <form action="/hello/h5" method="post">
+         <input name="name" />
+         <input type="submit" value="提交">
+     </form>
+     </body>
+     </html>
+     ```
+
+   - controller
+
+     ```java
+            //乱码测试
+         @RequestMapping(value = "/h5",method = RequestMethod.POST)
+         public String h5(Model model, @RequestParam("name") String name){
+     
+             System.out.println("name:"+name);
+             model.addAttribute("msg",name);
+             return "hello";
+     
+         }
+     ```
+
+     ![image-20200107151557059](.\images\image-20200107151557059.png)
+
+     ![image-20200107151739301](.\images\image-20200107151739301.png)
+
+     ![image-20200107151705798](.\images\image-20200107151705798.png)
+
+     post提交，到后台数据就乱码了。
+
+     使用过滤器来解决。
+
+     自定义过滤器：实现 javax.servlet.Filter接口
+
+     ```java
+     package com.cevlink.controller;
+     import org.springframework.util.StringUtils;
+     
+     import javax.servlet.*;
+     import javax.servlet.http.HttpServletRequest;
+     import javax.servlet.http.HttpServletResponse;
+     import java.io.IOException;
+     
+     public class EncodingFilter implements Filter {
+         private String encoding;
+         public void init(FilterConfig filterConfig) throws ServletException {
+             encoding  = filterConfig.getInitParameter("encoding");
+         }
+     
+         public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+             HttpServletRequest req = (HttpServletRequest)request;
+             HttpServletResponse resp = (HttpServletResponse)response;
+             if (StringUtils.isEmpty(encoding)){
+                 req.setCharacterEncoding("utf-8");
+                 resp.setCharacterEncoding("utf-8");
+             }
+             req.setCharacterEncoding(encoding);
+             resp.setCharacterEncoding(encoding);
+             chain.doFilter(request,response);
+         }
+     
+         public void destroy() {
+     
+         }
+     }
+     
+     ```
+
+     web配置
+
+     web.xml
+
+     ```xml
+         <filter>
+             <filter-name>EncodingFilter</filter-name>
+             <filter-class>com.cevlink.controller.EncodingFilter</filter-class>
+             <init-param>
+                 <param-name>encoding</param-name>
+                 <param-value>utf-8</param-value>
+             </init-param>
+         </filter>
+         <filter-mapping>
+             <filter-name>EncodingFilter</filter-name>
+     <!--        过滤所有请求-->
+             <url-pattern>/*</url-pattern>
+         </filter-mapping>
+     ```
+
+     后台接收数据时编码ok
+
+     ![image-20200107154304063](.\images\image-20200107154304063.png)
+
+     前端
+
+     ![image-20200107154341316](.\images\image-20200107154341316.png)
+
+     - 使用springMVC提供的过滤器
+
+       ```xml
+           <filter>
+               <filter-name>encoding</filter-name>
+               <filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class>
+               <init-param>
+                   <param-name>encoding</param-name>
+                   <param-value>utf-8</param-value>
+               </init-param>
+           </filter>
+           <filter-mapping>
+               <filter-name>encoding</filter-name>
+               <url-pattern>/</url-pattern>
+           </filter-mapping>
+       ```
+
+       ```java
+           protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+               String encoding = this.getEncoding();
+               if (encoding != null) {
+                   if (this.isForceRequestEncoding() || request.getCharacterEncoding() == null) {
+                       request.setCharacterEncoding(encoding);
+                   }
+       
+                   if (this.isForceResponseEncoding()) {
+                       response.setCharacterEncoding(encoding);
+                   }
+               }
+       
+               filterChain.doFilter(request, response);
+           }
+       ```
+
+### 9.JSON
+
+  ```javascript
+        //编写JavaScript对象 ES6
+        var user = {
+            name:"yc",
+            age:18
+        }
+        //对象转换为string
+        var s = JSON.stringify(user);
+        console.log(s);
+        console.log("================");
+
+        //string 解析为对象
+        var parse = JSON.parse(s);
+        var name = parse.name;
+        console.log(parse);
+        console.log(name);
+  ```
+
+![image-20200107161317253](.\images\image-20200107161317253.png)
+
+1. jackson
+
+   - pom
+
+     ```xml
+         <!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind -->
+         <dependency>
+             <groupId>com.fasterxml.jackson.core</groupId>
+             <artifactId>jackson-databind</artifactId>
+             <version>2.10.1</version>
+         </dependency>
+     ```
+
+   - web.xml
+
+     ```xml
+     <?xml version="1.0" encoding="UTF-8"?>
+     <web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd"
+              version="4.0">
+         <!-- 1.配置dispatcherServlet -->
+         <servlet>
+             <servlet-name>dispatcherServlet</servlet-name>
+             <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+             <init-param>
+                 <param-name>contextConfigLocation</param-name>
+                 <param-value>classpath:springmvc-servlet.xml</param-value>
+             </init-param>
+         </servlet>
+         <servlet-mapping>
+             <servlet-name>dispatcherServlet</servlet-name>
+             <url-pattern>/</url-pattern>
+         </servlet-mapping>
+     
+         <!-- 2.配置编码过滤器 -->
+         <filter>
+             <filter-name>encodingFilter</filter-name>
+             <filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class>
+             <init-param>
+                 <param-name>encoding</param-name>
+                 <param-value>utf-8</param-value>
+             </init-param>
+         </filter>
+         <filter-mapping>
+             <filter-name>encodingFilter</filter-name>
+             <url-pattern>/*</url-pattern>
+         </filter-mapping>
+         <welcome-file-list>
+             <welcome-file>index.jsp</welcome-file>
+         </welcome-file-list>
+     </web-app>
+     ```
+
+     
+
+   - springmvc-servlet.xml
+
+     ```xml
+     <?xml version="1.0" encoding="UTF-8"?>
+     <beans xmlns="http://www.springframework.org/schema/beans"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xmlns:p="http://www.springframework.org/schema/p"
+            xmlns:context="http://www.springframework.org/schema/context"
+            xmlns:mvc="http://www.springframework.org/schema/mvc"
+            xsi:schemaLocation="http://www.springframework.org/schema/beans
+             https://www.springframework.org/schema/beans/spring-beans.xsd
+             http://www.springframework.org/schema/context
+             https://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/mvc https://www.springframework.org/schema/mvc/spring-mvc.xsd">
+     
+         <!-- 自动扫描包 让指定下的注解生效，由ioc容器统一管理-->
+         <context:component-scan base-package="com.cevlink.controller"/>
+     
+         <mvc:default-servlet-handler/>
+     
+         <mvc:annotation-driven>
+             <!-- json编码配置-->
+             <mvc:message-converters>
+                 <bean class="org.springframework.http.converter.StringHttpMessageConverter">
+                     <constructor-arg value="utf-8"/>
+                 </bean>
+                 <bean class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter">
+                     <property name="objectMapper">
+                         <bean class="org.springframework.http.converter.json.Jackson2ObjectMapperFactoryBean">
+                             <property name="failOnEmptyBeans" value="false"/>
+                         </bean>
+                     </property>
+                 </bean>
+             </mvc:message-converters>
+         </mvc:annotation-driven>
+     
+         <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+             <property name="prefix" value="/WEB-INF/jsp/"/>
+             <property name="suffix" value=".jsp"/>
+         </bean>
+     
+     </beans>
+     ```
+
+   - controller
+
+     ```java
+     @Controller
+     @RequestMapping("/hello")
+     public class HelloController {
+     
+     
+         @ResponseBody
+         @GetMapping("/h1")
+         public Object h1(User user){
+             ObjectMapper mapper = new ObjectMapper();
+             String str = null;
+             try {
+                 str = mapper.writer().writeValueAsString(user);
+             } catch (JsonProcessingException e) {
+                 e.printStackTrace();
+             }
+             return str;
+         }
+         
+     }
+     ```
+
+     
+
+   - model
+
+     ```java
+     @Data
+     public class User {
+     
+         private Long id;
+         private String name;
+         private int age;
+     
+     }
+     ```
+
+     测试
+
+     ![image-20200107165956233](.\images\image-20200107165956233.png)
+
+     直接返回 return user; 也可以，因为有@ResponseBody
+
+     如果没有注解@ResponseBody 返回对象
+
+     ![image-20200107170527307](.\images\image-20200107170527307.png)
+
+     @Controller会走视图解析器  去拼接返回/WEB-INF/jsp/hello/h1.jsp
+
+     @RestController不会走视图解析器，会返回json字符串： {"id":1213,"name":"札萨","age":31}
+
+     ![image-20200107170732797](.\images\image-20200107170732797.png)
+
+2. fastjson
+
+3. gson
